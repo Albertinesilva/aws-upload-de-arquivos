@@ -1,8 +1,10 @@
 ## ☁️📤 AWS S3 Upload de Arquivos com Spring Boot
 
-<p align="center">
-<em>Projeto backend desenvolvido para implementar upload de arquivos para a Amazon S3, utilizando Spring Boot, configuração de IAM, políticas de bucket e CORS, seguindo boas práticas de segurança e organização de credenciais.
-Este projeto demonstra a integração entre uma API REST e a infraestrutura AWS para armazenamento escalável de arquivos.</em>
+<p style="text-align: justify;">
+<em>
+Projeto backend desenvolvido para implementar upload de arquivos para a Amazon S3, utilizando Spring Boot, configuração de IAM, políticas de bucket e CORS, seguindo boas práticas de segurança e organização de credenciais.
+Este projeto demonstra a integração entre uma API REST e a infraestrutura AWS para armazenamento escalável de arquivos.
+</em>
 </p>
 
 ---
