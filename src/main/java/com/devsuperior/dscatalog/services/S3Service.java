@@ -1,45 +1,42 @@
 package com.devsuperior.dscatalog.services;
 
-import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 
+import org.apache.commons.io.FilenameUtils;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 
 /**
- * Serviço responsável por operações de upload de arquivos
- * para um bucket do Amazon S3.
- *
+ * Serviço responsável pelo gerenciamento de uploads de arquivos
+ * para o Amazon S3.
+ * 
  * <p>
- * Esta implementação utiliza o cliente {@link AmazonS3} configurado
- * na classe de configuração da aplicação. O método disponibilizado
- * realiza o envio de um arquivo local para o bucket configurado.
+ * Este serviço abstrai a comunicação com o cliente AWS SDK,
+ * centralizando a lógica de:
  * </p>
- *
- * <p>
- * A propriedade esperada no arquivo {@code application.properties}
- * ou {@code application.yml} é:
- * </p>
- *
  * <ul>
- * <li><b>s3.bucket</b> – Nome do bucket de destino no Amazon S3</li>
+ * <li>Geração de nome único para o arquivo</li>
+ * <li>Definição de metadados</li>
+ * <li>Envio do arquivo ao bucket configurado</li>
+ * <li>Retorno da URL pública do objeto armazenado</li>
  * </ul>
- *
+ * 
  * <p>
- * <b>Observação:</b> Esta implementação utiliza um nome fixo
- * ("test.jpg") como chave do objeto no S3. Em ambientes reais,
- * recomenda-se gerar nomes dinâmicos para evitar sobrescrita
- * de arquivos.
+ * O nome do bucket é configurado via propriedade:
+ * <code>s3.bucket</code>.
  * </p>
- *
- * @author
+ * 
+ * @author Albert
  */
 @Service
 public class S3Service {
@@ -51,7 +48,7 @@ public class S3Service {
 
   /**
    * Cliente Amazon S3 injetado pelo Spring.
-   * Responsável por executar operações contra o bucket.
+   * Responsável por executar operações contra o bucket configurado.
    */
   @Autowired
   private AmazonS3 s3client;
@@ -63,44 +60,67 @@ public class S3Service {
   private String bucketName;
 
   /**
-   * Realiza o upload de um arquivo local para o bucket S3 configurado.
-   *
+   * Realiza o upload de um arquivo recebido via requisição multipart.
+   * 
    * <p>
-   * O arquivo é enviado utilizando a API
-   * {@link AmazonS3#putObject(PutObjectRequest)}.
-   * Atualmente, o objeto é armazenado com a chave fixa "test.jpg".
+   * Fluxo executado:
    * </p>
+   * <ol>
+   * <li>Obtém o nome original do arquivo</li>
+   * <li>Extrai a extensão</li>
+   * <li>Gera um nome único baseado no timestamp atual</li>
+   * <li>Obtém InputStream e Content-Type</li>
+   * <li>Delegação para o método interno de upload</li>
+   * </ol>
    *
-   * <p>
-   * Exceções específicas são tratadas separadamente:
-   * </p>
-   *
-   * <ul>
-   * <li>{@link AmazonServiceException} – Erros retornados pelo serviço AWS
-   * (ex: permissão negada, bucket inexistente, erro 403, etc.)</li>
-   * <li>{@link AmazonClientException} – Erros do lado cliente
-   * (ex: falha de conexão, timeout, problemas de rede)</li>
-   * </ul>
-   *
-   * @param localFilePath caminho absoluto do arquivo local a ser enviado
+   * @param file arquivo enviado via {@link MultipartFile}
+   * @return URL pública do arquivo armazenado no S3
+   * @throws IllegalArgumentException caso ocorra erro na leitura do arquivo
    */
-  public void uploadFile(String localFilePath) {
+  public URL uploadFile(MultipartFile file) {
     try {
-      File file = new File(localFilePath);
 
-      LOG.info("Upload start - File: {}", file.getName());
+      String originalName = file.getOriginalFilename();
+      LOG.info("Received file: {}", originalName);
 
-      s3client.putObject(new PutObjectRequest(bucketName, "test.jpg", file));
+      String extension = FilenameUtils.getExtension(originalName);
+      LOG.info("File extension: {}", extension);
 
-      LOG.info("Upload successfully completed.");
+      // Gera nome único baseado em timestamp
+      String fileName = Instant.now().toDate().getTime() + "." + extension;
 
-    } catch (AmazonServiceException e) {
-      LOG.error("AmazonServiceException: {}", e.getErrorMessage());
-      LOG.error("HTTP Status Code: {}", e.getStatusCode());
-      LOG.error("AWS Error Code: {}", e.getErrorCode());
+      InputStream inputStream = file.getInputStream();
+      String contentType = file.getContentType();
 
-    } catch (AmazonClientException e) {
-      LOG.error("AmazonClientException: {}", e.getMessage());
+      return uploadFile(inputStream, fileName, contentType);
+
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Error converting MultipartFile to File", e);
     }
+  }
+
+  /**
+   * Executa efetivamente o upload do arquivo para o bucket S3.
+   *
+   * <p>
+   * Define metadados como Content-Type e realiza a operação
+   * de armazenamento através do método {@code putObject}.
+   * </p>
+   *
+   * @param inputStream fluxo de dados do arquivo
+   * @param fileName    nome final do arquivo no bucket
+   * @param contentType tipo MIME do arquivo
+   * @return URL pública do objeto armazenado
+   */
+  private URL uploadFile(InputStream inputStream, String fileName, String contentType) {
+
+    ObjectMetadata meta = new ObjectMetadata();
+    meta.setContentType(contentType);
+    LOG.info("Upload start - File: {}, Content-Type: {}", fileName, contentType);
+
+    s3client.putObject(bucketName, fileName, inputStream, meta);
+    LOG.info("Upload completed - File: {}", fileName);
+
+    return s3client.getUrl(bucketName, fileName);
   }
 }
