@@ -21,32 +21,86 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+/**
+ * Entidade que representa um usuário do sistema.
+ * <p>
+ * Esta classe é mapeada para a tabela <strong>tb_user</strong> no banco de
+ * dados
+ * e implementa a interface {@link UserDetails}, permitindo integração direta
+ * com o Spring Security para autenticação e autorização.
+ * </p>
+ *
+ * <p>
+ * Cada usuário pode possuir múltiplos perfis ({@link Role}),
+ * configurando um relacionamento muitos-para-muitos.
+ * </p>
+ *
+ * @author
+ */
 @Entity
 @Table(name = "tb_user")
 public class User implements UserDetails, Serializable {
+
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * Identificador único do usuário.
+	 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	/**
+	 * Primeiro nome do usuário.
+	 */
 	private String firstName;
+
+	/**
+	 * Sobrenome do usuário.
+	 */
 	private String lastName;
-	
+
+	/**
+	 * Endereço de e-mail do usuário.
+	 * <p>
+	 * Deve ser único no sistema.
+	 * </p>
+	 */
 	@Column(unique = true)
 	private String email;
+
+	/**
+	 * Senha do usuário (armazenada de forma criptografada).
+	 */
 	private String password;
-	
+
+	/**
+	 * Conjunto de perfis (roles) associados ao usuário.
+	 * <p>
+	 * Relacionamento muitos-para-muitos com carregamento imediato (EAGER),
+	 * pois as permissões são necessárias no momento da autenticação.
+	 * </p>
+	 */
 	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(name = "tb_user_role",
-		joinColumns = @JoinColumn(name = "user_id"),
-		inverseJoinColumns = @JoinColumn(name = "role_id"))	
+	@JoinTable(name = "tb_user_role", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
 	private Set<Role> roles = new HashSet<>();
-	
+
+	/**
+	 * Construtor padrão exigido pela JPA.
+	 */
 	public User() {
 	}
 
+	/**
+	 * Construtor para criação de instâncias com dados básicos.
+	 *
+	 * @param id        identificador do usuário
+	 * @param firstName primeiro nome
+	 * @param lastName  sobrenome
+	 * @param email     e-mail do usuário
+	 * @param password  senha criptografada
+	 */
 	public User(Long id, String firstName, String lastName, String email, String password) {
-		super();
 		this.id = id;
 		this.firstName = firstName;
 		this.lastName = lastName;
@@ -78,6 +132,11 @@ public class User implements UserDetails, Serializable {
 		this.lastName = lastName;
 	}
 
+	/**
+	 * Retorna o e-mail do usuário.
+	 * 
+	 * @return e-mail utilizado como login
+	 */
 	public String getEmail() {
 		return email;
 	}
@@ -86,6 +145,11 @@ public class User implements UserDetails, Serializable {
 		this.email = email;
 	}
 
+	/**
+	 * Retorna a senha criptografada do usuário.
+	 * 
+	 * @return senha criptografada
+	 */
 	public String getPassword() {
 		return password;
 	}
@@ -93,11 +157,19 @@ public class User implements UserDetails, Serializable {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-	
+
+	/**
+	 * Retorna os perfis associados ao usuário.
+	 *
+	 * @return conjunto de roles
+	 */
 	public Set<Role> getRoles() {
 		return roles;
 	}
 
+	/**
+	 * Gera hashCode baseado no identificador da entidade.
+	 */
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -105,6 +177,10 @@ public class User implements UserDetails, Serializable {
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		return result;
 	}
+
+	/**
+	 * Compara usuários com base no identificador.
+	 */
 
 	@Override
 	public boolean equals(Object obj) {
@@ -123,32 +199,57 @@ public class User implements UserDetails, Serializable {
 		return true;
 	}
 
+	/**
+	 * Retorna as autoridades (permissões) do usuário
+	 * convertendo cada {@link Role} em {@link SimpleGrantedAuthority}.
+	 *
+	 * @return coleção de autoridades utilizadas pelo Spring Security
+	 */
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return roles.stream().map(role -> new SimpleGrantedAuthority(role.getAuthority()))
+		return roles.stream()
+				.map(role -> new SimpleGrantedAuthority(role.getAuthority()))
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * Retorna o nome de usuário utilizado na autenticação.
+	 * Neste sistema, o e-mail é utilizado como login.
+	 *
+	 * @return e-mail do usuário
+	 */
 	@Override
 	public String getUsername() {
 		return email;
 	}
 
+	/**
+	 * Indica se a conta não está expirada.
+	 */
 	@Override
 	public boolean isAccountNonExpired() {
 		return true;
 	}
 
+	/**
+	 * Indica se a conta não está bloqueada.
+	 */
 	@Override
 	public boolean isAccountNonLocked() {
 		return true;
 	}
 
+	/**
+	 * Indica se as credenciais não estão expiradas.
+	 */
 	@Override
 	public boolean isCredentialsNonExpired() {
 		return true;
 	}
 
+	/**
+	 * Indica se o usuário está habilitado.
+	 */
 	@Override
 	public boolean isEnabled() {
 		return true;

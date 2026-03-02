@@ -5,40 +5,83 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 
+/**
+ * Entidade que representa um Produto do catálogo.
+ *
+ * <p>
+ * Mapeada para a tabela {@code tb_product}.
+ * </p>
+ *
+ * <p>
+ * Um produto pode pertencer a uma ou mais categorias,
+ * sendo o lado proprietário do relacionamento Many-to-Many
+ * com {@link Category}.
+ * </p>
+ *
+ * <p>
+ * A associação é realizada através da tabela intermediária
+ * {@code tb_product_category}.
+ * </p>
+ *
+ * <p>
+ * O campo {@code description} é armazenado como TEXT no banco,
+ * permitindo descrições extensas.
+ * </p>
+ */
 @Entity
 @Table(name = "tb_product")
 public class Product implements Serializable {
+
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * Identificador único do produto.
+	 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	/**
+	 * Nome do produto.
+	 */
 	private String name;
-	
+
+	/**
+	 * Descrição detalhada do produto.
+	 */
 	@Column(columnDefinition = "TEXT")
 	private String description;
+
+	/**
+	 * Preço do produto.
+	 */
 	private Double price;
+
+	/**
+	 * URL da imagem representativa do produto.
+	 */
 	private String imgUrl;
-	
+
+	/**
+	 * Data associada ao produto (ex: data de cadastro ou publicação).
+	 */
 	@Column(columnDefinition = "TIMESTAMP WITHOUT TIME ZONE")
 	private Instant date;
-	
+
+	/**
+	 * Categorias associadas ao produto.
+	 *
+	 * <p>
+	 * Relacionamento Many-to-Many com tabela de junção.
+	 * Este é o lado proprietário da associação.
+	 * </p>
+	 */
 	@ManyToMany
-	@JoinTable(name = "tb_product_category",
-		joinColumns = @JoinColumn(name = "product_id"),
-		inverseJoinColumns = @JoinColumn(name = "category_id"))	
-	Set<Category> categories = new HashSet<>();
-	
+	@JoinTable(name = "tb_product_category", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
+	private Set<Category> categories = new HashSet<>();
+
 	public Product() {
 	}
 
@@ -51,58 +94,65 @@ public class Product implements Serializable {
 		this.date = date;
 	}
 
+	// Getters
+
 	public Long getId() {
 		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getDescription() {
 		return description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
 	}
 
 	public Double getPrice() {
 		return price;
 	}
 
-	public void setPrice(Double price) {
-		this.price = price;
-	}
-
 	public String getImgUrl() {
 		return imgUrl;
-	}
-
-	public void setImgUrl(String imgUrl) {
-		this.imgUrl = imgUrl;
 	}
 
 	public Instant getDate() {
 		return date;
 	}
 
-	public void setDate(Instant date) {
-		this.date = date;
-	}
-
 	public Set<Category> getCategories() {
 		return categories;
 	}
 
+	// Setters
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public void setPrice(Double price) {
+		this.price = price;
+	}
+
+	public void setImgUrl(String imgUrl) {
+		this.imgUrl = imgUrl;
+	}
+
+	public void setDate(Instant date) {
+		this.date = date;
+	}
+
+	/**
+	 * Implementação de hashCode baseada no ID.
+	 */
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -111,6 +161,14 @@ public class Product implements Serializable {
 		return result;
 	}
 
+	/**
+	 * Implementação de equals baseada no ID.
+	 *
+	 * <p>
+	 * Entidades JPA devem comparar igualdade com base
+	 * na identidade persistida.
+	 * </p>
+	 */
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -126,5 +184,5 @@ public class Product implements Serializable {
 		} else if (!id.equals(other.id))
 			return false;
 		return true;
-	}	
+	}
 }
