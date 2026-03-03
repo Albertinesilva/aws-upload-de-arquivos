@@ -139,13 +139,23 @@ spring.servlet.multipart.max-request-size=${MAX_FILE_SIZE:10MB}
 ---
 ### 🛠️ Tecnologias Utilizadas
 
-- Java
-- Spring Boot
-- Spring Web
-- AWS SDK
-- Amazon S3
-- IAM
-- Maven
+- Java 17  
+- Spring Boot  
+- Spring Web  
+- Spring Data JPA  
+- Hibernate  
+- Spring Validation  
+- Spring Security  
+- Spring Security OAuth2  
+- Spring Boot Test  
+- AWS SDK for Java (S3)  
+- Amazon S3  
+- IAM  
+- H2 Database  
+- PostgreSQL  
+- Commons IO  
+- Spring Cloud (Hoxton.SR8)  
+- Maven  
 
 ---
 ### 🚀 Possíveis Evoluções
