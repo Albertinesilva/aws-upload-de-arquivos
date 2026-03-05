@@ -1,4 +1,4 @@
-package com.albertsilva.dscatalog.security;
+package com.albertsilva.dscatalog.security.user;
 
 import java.util.Collection;
 import java.util.Objects;

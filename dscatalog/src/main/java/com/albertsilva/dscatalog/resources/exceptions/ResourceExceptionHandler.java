@@ -103,7 +103,7 @@ public class ResourceExceptionHandler {
 			MethodArgumentNotValidException e,
 			HttpServletRequest request) {
 
-		HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+		HttpStatus status = HttpStatus.valueOf(422);
 
 		ValidationError err = new ValidationError();
 		err.setTimestamp(Instant.now());
@@ -179,7 +179,7 @@ public class ResourceExceptionHandler {
 			IllegalArgumentException e,
 			HttpServletRequest request) {
 
-		HttpStatus status = HttpStatus.BAD_REQUEST;
+		HttpStatus status = HttpStatus.valueOf(422);
 
 		StandardError err = new StandardError();
 		err.setTimestamp(Instant.now());

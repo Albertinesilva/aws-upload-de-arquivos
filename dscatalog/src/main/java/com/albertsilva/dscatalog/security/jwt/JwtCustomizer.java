@@ -1,15 +1,18 @@
-package com.albertsilva.dscatalog.components;
+package com.albertsilva.dscatalog.security.jwt;
 
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.stereotype.Component;
 
-import com.albertsilva.dscatalog.security.CustomUserDetails;
+import com.albertsilva.dscatalog.security.user.CustomUserDetails;
 
 /**
  * Customiza o JWT (JSON Web Token) de acesso adicionando claims específicas do
@@ -37,6 +40,8 @@ import com.albertsilva.dscatalog.security.CustomUserDetails;
 @Component
 public class JwtCustomizer implements OAuth2TokenCustomizer<JwtEncodingContext> {
 
+  private static Logger logger = LoggerFactory.getLogger(JwtCustomizer.class);
+
   private static final String CLAIM_USER_ID = "userId";
   private static final String CLAIM_FIRST_NAME = "firstName";
   private static final String CLAIM_ROLES = "roles";
@@ -63,36 +68,52 @@ public class JwtCustomizer implements OAuth2TokenCustomizer<JwtEncodingContext> 
   @Override
   public void customize(JwtEncodingContext context) {
 
-    // Aplica somente para access_token
     if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+      logger.debug("Token type is not ACCESS_TOKEN, skipping customization.");
       return;
     }
 
-    // Ignora fluxo client_credentials
     if (AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType())) {
+      context.getClaims()
+          .claim(CLAIM_USER_ID, context.getRegisteredClient().getClientId())
+          .claim(CLAIM_FIRST_NAME, context.getRegisteredClient().getClientName())
+          .claim("scopes", context.getAuthorizedScopes());
+
+      logger.debug("Client credentials flow detected, added client info to claims.");
+      logger.debug("Client ID: " + context.getRegisteredClient().getClientId());
+      logger.debug("Client Name: " + context.getRegisteredClient().getClientName());
+      logger.debug("Authorized Scopes: " + context.getAuthorizedScopes());
       return;
     }
 
     Authentication authentication = context.getPrincipal();
     if (authentication == null) {
+      logger.warn("Authentication principal is null, cannot customize JWT claims.");
+      logger.debug("Authentication object: " + authentication);
       return;
     }
 
     Object principal = authentication.getPrincipal();
-    if (!(principal instanceof CustomUserDetails user)) {
+    if (!(principal instanceof UserDetails user)) {
+      logger.warn("Principal is not an instance of UserDetails, cannot customize JWT claims.");
+      logger.debug("Principal class: " + principal.getClass().getName());
+      logger.debug("Principal object: " + principal);
+
       return;
     }
 
-    // Extrai roles já carregadas (sem consulta ao banco)
-    var roles = user.getAuthorities()
-        .stream()
+    var roles = user.getAuthorities().stream()
         .map(auth -> auth.getAuthority())
         .collect(Collectors.toList());
 
-    // Adiciona claims personalizadas ao JWT
     context.getClaims()
-        .claim(CLAIM_USER_ID, user.getId())
-        .claim(CLAIM_FIRST_NAME, user.getFirstName())
+        .claim(CLAIM_USER_ID, user.getUsername())
+        .claim(CLAIM_FIRST_NAME, user.getUsername())
         .claim(CLAIM_ROLES, roles);
+
+    logger.debug("Customized JWT claims added for user: " + user.getUsername());
+    logger.debug("User ID claim: " + user.getUsername());
+    logger.debug("Roles claim: " + roles);
   }
+
 }

@@ -1,4 +1,4 @@
-package com.albertsilva.dscatalog.config;
+package com.albertsilva.dscatalog.security.jwt;
 
 import java.io.InputStream;
 import java.security.interfaces.RSAPrivateKey;

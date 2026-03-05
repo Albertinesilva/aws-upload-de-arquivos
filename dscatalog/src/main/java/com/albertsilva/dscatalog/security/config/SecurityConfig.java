@@ -1,4 +1,4 @@
-package com.albertsilva.dscatalog.config;
+package com.albertsilva.dscatalog.security.config;
 
 import java.util.List;
 
@@ -19,88 +19,97 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * Configuração de segurança do Resource Server.
  *
  * <p>
- * Define regras de autorização, CORS, CSRF, headers e autenticação via OAuth2
- * JWT.
- * </p>
- * 
- * <p>
- * Inclui:
+ * Esta classe define:
  * <ul>
- * <li>Regras públicas e restritas por roles</li>
- * <li>Configuração de CORS para permitir chamadas de qualquer origem</li>
- * <li>Form login habilitado para testes</li>
- * <li>Criptografia de senhas usando BCrypt</li>
+ * <li>Regras de autorização para diferentes perfis de usuário (roles)</li>
+ * <li>Configuração de CORS para chamadas de qualquer origem</li>
+ * <li>Desabilita CSRF para simplificar chamadas via API (REST)</li>
+ * <li>Habilita OAuth2 JWT como método de autenticação principal</li>
  * </ul>
  * </p>
  * 
- * @author Albert
- * @since 2026-03-05
+ * <p>
+ * Observações:
+ * <ul>
+ * <li>O matcher desta configuração é global ("/**") e não conflita com os
+ * endpoints do Authorization Server</li>
+ * <li>Utiliza BCrypt para criptografia de senhas</li>
+ * </ul>
+ * </p>
+ * 
+ * Autor: Albert
+ * Data: 2026-03-05
  */
 @Configuration
 public class SecurityConfig {
 
+    /** Endpoints públicos, sem autenticação */
     private static final String[] PUBLIC = { "/h2-console/**" };
+
+    /** Endpoints acessíveis para OPERATOR e ADMIN */
     private static final String[] OPERATOR_OR_ADMIN = { "/products/**", "/categories/**" };
+
+    /** Endpoints restritos apenas a ADMIN */
     private static final String[] ADMIN = { "/users/**" };
 
     /**
      * Configura o {@link SecurityFilterChain} do Resource Server.
      *
      * <p>
-     * Define regras de autorização baseadas em roles, habilita OAuth2 JWT,
-     * form login, desabilita CSRF e configura headers para H2 console.
+     * Esta configuração define:
+     * <ul>
+     * <li>Autorização baseada em roles</li>
+     * <li>Permissão de GET público para endpoints OPERATOR e ADMIN</li>
+     * <li>Proteção de outros endpoints com autenticação obrigatória</li>
+     * <li>Habilitação de OAuth2 JWT para autenticação</li>
+     * <li>Desabilita CSRF e frameOptions (necessário para H2 console)</li>
+     * </ul>
      * </p>
      *
-     * @param http instância de {@link HttpSecurity} fornecida pelo Spring
+     * @param http instância de {@link HttpSecurity}
      * @return {@link SecurityFilterChain} configurado
-     * @throws Exception caso ocorra erro na configuração de segurança
-     * @author Albert
-     * @since 2026-03-05
+     * @throws Exception caso ocorra erro na configuração
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-
+    public SecurityFilterChain resourceServerFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())
+                .securityMatcher("/**") // aplica à API, não conflita com Auth Server
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC).permitAll()
                         .requestMatchers(HttpMethod.GET, OPERATOR_OR_ADMIN).permitAll()
                         .requestMatchers(OPERATOR_OR_ADMIN).hasAnyRole("OPERATOR", "ADMIN")
                         .requestMatchers(ADMIN).hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
-                .formLogin(Customizer.withDefaults())
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }
 
     /**
-     * Configuração de CORS (Cross-Origin Resource Sharing).
+     * Configura CORS (Cross-Origin Resource Sharing).
      *
      * <p>
-     * Permite chamadas de qualquer origem, com métodos POST, GET, PUT, DELETE e
-     * PATCH,
-     * e headers Authorization e Content-Type.
+     * Permite chamadas de qualquer origem, com métodos GET, POST, PUT, DELETE e
+     * PATCH.
+     * Headers permitidos: Authorization, Content-Type.
      * </p>
      *
      * @return {@link CorsConfigurationSource} configurado
-     * @author Albert
-     * @since 2026-03-05
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(List.of("*"));
-        corsConfig.setAllowedMethods(List.of("POST", "GET", "PUT", "DELETE", "PATCH"));
-        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        corsConfig.setAllowCredentials(true);
+        CorsConfiguration cors = new CorsConfiguration();
+        cors.setAllowedOriginPatterns(List.of("*"));
+        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
+        cors.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        cors.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);
-
+        source.registerCorsConfiguration("/**", cors);
         return source;
     }
 
@@ -108,13 +117,11 @@ public class SecurityConfig {
      * Configura o {@link PasswordEncoder} utilizado pelo Spring Security.
      *
      * <p>
-     * Utiliza {@link BCryptPasswordEncoder} para criptografar senhas de usuários
-     * antes de persistir no banco.
+     * Utiliza {@link BCryptPasswordEncoder} para criptografar senhas antes de
+     * persistir.
      * </p>
      *
      * @return {@link PasswordEncoder} configurado
-     * @author Albert
-     * @since 2026-03-05
      */
     @Bean
     public PasswordEncoder passwordEncoder() {

@@ -1,4 +1,4 @@
-package com.albertsilva.dscatalog.config;
+package com.albertsilva.dscatalog.security.aws;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
